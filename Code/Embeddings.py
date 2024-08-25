@@ -12,7 +12,7 @@ dataset=pd.read_csv(os.getcwd()+"\\Endolysin_Data.csv")
 
 #Filtering my data based on arbitrary criterions set by us // That is, curated data, with existing Tm effects and pH conditions of 6<=pH<=8
 #There still exist some duplicate values, thus one must filter the data further
-filtered_dataset=dataset[(dataset["is_curated"]==True) & (~dataset["dTm"].isna())  & (6<=dataset["pH"]) & (dataset["pH"]<=8)]
+filtered_dataset=dataset[(dataset["is_curated"]==True) & (~dataset["ddG"].isna())  & (6<=dataset["pH"]) & (dataset["pH"]<=8)]
 
 #Drop the duplicate entries that exist based on the relevant columns of my data
 filtered_dataset.drop_duplicates(subset=["wild_type","position","mutation","pH","tm"],keep='first',inplace=True)
@@ -55,11 +55,12 @@ pooled_embeddings=torch.mean(embeddings,dim=2)
 
 
 #From here on out, it is just code for some fancy visualizations
-
+token_seqs=tokenized_seqs['input_ids']
 pca=PCA(n_components=2)
-pca.fit(a)
-transformed_seqs=pca.transform(a)
-rand_transform=pca.transform(pooled_embeddings)
+pca.fit(token_seqs)
+
+transformed_seqs=pca.transform(token_seqs)
+rand_transform=pca.transform(tok_seq['input_ids'])
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -80,20 +81,33 @@ colors = ['#A3EBB1', '#21B6A8','#116530']
 positions = [0,0.5,1]
 cmap = LinearSegmentedColormap.from_list('my_colormap', list(zip(positions, colors)))
 
-scatter=ax.scatter(x=t[relevant,0],y=t[relevant,1],c=filtered_dataset["position"].tolist(), cmap=cmap, edgecolors='k', linewidths=0.5,)
+#scatter=ax.scatter(x=t[relevant,0],y=t[relevant,1],c=filtered_dataset["position"].tolist(), cmap=cmap, edgecolors='k', linewidths=0.5,)
+
+scatter=ax.scatter(x=transformed_seqs[:,0],y=transformed_seqs[:,1],c=filtered_dataset["position"].tolist(), cmap=cmap, edgecolors='k', linewidths=0.5,)
+
 
 #This is the code to plot a random synthetic sequence embedding on the two-dimensional plain
 rand_rep=ax.scatter(x=rand_transform[:,0],y=rand_transform[:,1],marker='x',c='k')
 
 #Some code to plot the original sequence representations from which the synthetic sequence arose
-sub=np.array(relevant)[list(dict(indices).keys())]
-parent_seqs=ax.scatter(x=t[sub,0],y=t[sub,1],linewidths=0.5, c=["#ECF87F","#ECF87F"],edgecolors='k')
+#sub=np.array(relevant)[list(dict(indices).keys())]
+
+#This is the implementation of sub for token sequences
+sub=list(dict(indices).keys())
+parent_seqs=ax.scatter(x=transformed_seqs[sub,0],y=transformed_seqs[sub,1],linewidths=0.5, c=["#ECF87F","#ECF87F"],edgecolors='k')
+
+#General stuff
 plt.xticks(rotation=45)
 ax.set_xlabel(xlabel=f"PC1 ({pca.explained_variance_ratio_[0]*100:.3f}%)")
 ax.set_ylabel(ylabel=f"PC2 ({pca.explained_variance_ratio_[1]*100:.3f}%)")
-
+ax.set_xlim([mean_x - 0.8 * var_x/10, -0.5])
+ax.set_ylim([-1.25, 0.25])
 plt.tight_layout()
 cbar=fig.colorbar(mappable=scatter)
 cbar.set_label("Mutation Position")
 fig.show()
+
+mean_x, mean_y=np.median(transformed_seqs, axis=0)
+var_x, var_y=np.std(transformed_seqs, axis=0)
+
 plt.close()
