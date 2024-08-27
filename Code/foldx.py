@@ -40,7 +40,7 @@ with open("individual_list.txt", "w") as f:
         f.write(f"{position};\n")
         #os.system(f'./foldx_20241231  --command=PositionScan --pdb=2lzm.pdb --positions={position} --output-file={position}') 
 
-#os.system(f"foldx  --command=BuildModel --pdb=2lzm+correct.pdb --mutant-file=individual_list.txt --numberOfRuns={rep}")
+os.system(f"foldx  --command=BuildModel --pdb=2lzm+correct.pdb --mutant-file=individual_list.txt --numberOfRuns={rep}")
 
 
 with open("Average_2lzm+correct.fxout", "r") as f:
