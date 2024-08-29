@@ -5,7 +5,6 @@ from pyrosetta.toolbox import *
 from pyrosetta.teaching import *
 from pyrosetta.rosetta.protocols.relax import FastRelax
 
-
 class Energy_Calculation:
     def __init__(self):
         
@@ -46,7 +45,7 @@ class Energy_Calculation:
         mutated.assign(self._wild_type)
 
         #Define the single/multiple mutation profile for said sequence
-        if type(position)==list():
+        if type(position)==list:
             for pos, mut in zip(position,mutation):
                 mutate_residue(mutated,pos+1,mut) #Addition of +1 since the index starts from one
         
@@ -90,37 +89,9 @@ class Energy_Calculation:
 
 
 
-Gibbs=Energy_Calculation()
+#Gibbs=Energy_Calculation()
 #mut=Gibbs.set_mutations(filtered_dataset.iloc[0]["position"]-1, filtered_dataset.iloc[0]["mutation"])
 #mutated_gibbs=Gibbs.get_Gibbs(mut)
 
-ddG=[]
-for index in range(filtered_dataset.shape[0]):
-    mut=Gibbs.set_mutations(filtered_dataset.iloc[index]["position"]-1, filtered_dataset.iloc[index]["mutation"])
-    mutated_gibbs=Gibbs.get_Gibbs(mut)
-    print(f"Done sequence {index}")
-    ddG.append(mutated_gibbs-Gibbs.base)
 
-np.corrcoef(ddG, filtered_dataset['ddG'].tolist()) #64% pearson correlation found
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-import matplotlib
-matplotlib.use('Agg')
-
-
-fig, ax=plt.subplots()
-
-ax.scatter(x=filtered_dataset['ddG'].to_numpy(),y=np.array(ddG))
-
-fig.show()
-
-#sns.scatterplot(x=np.array([0,1]), y=np.array([0,1]))
-
-plt.savefig("corr",format='png')
-
-import json
-
-with open("/mnt/c/Users/nwntas/ddG.json","w") as f:
-    json.dump(ddG,f)
 
