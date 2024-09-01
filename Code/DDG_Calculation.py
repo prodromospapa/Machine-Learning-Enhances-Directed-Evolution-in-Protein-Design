@@ -28,7 +28,7 @@ class Energy_Calculation:
         self._relax=relax
 
         wild_type=Pose()
-        wild_type=pose_from_pdb("/mnt/c/Users/nwntas/Downloads/2lzm.pdb")
+        wild_type=pose_from_pdb("Code/2lzm.pdb")
         mutate_residue(wild_type,12,"R") #Defining the mutations made to the crystal structure, so that it matches the wt-seq in our data
         mutate_residue(wild_type,137,"I")
         
