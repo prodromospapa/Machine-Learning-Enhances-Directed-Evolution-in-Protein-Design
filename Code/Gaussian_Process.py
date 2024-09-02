@@ -1,7 +1,5 @@
 from sklearn.gaussian_process import GaussianProcessRegressor as GP
 from sklearn.gaussian_process.kernels import RBF
-from sklearn.gaussian_process.kernels import Matern
-from sklearn.gaussian_process.kernels import RationalQuadratic
 from sklearn.decomposition import PCA
 import numpy as np
 
@@ -16,31 +14,19 @@ from DDG_Calculation import Energy_Calculation
 data=get_data("Endolysin_data")
 wild_type, data=set_mutation(data)
 
+
 #Initialize the tokenization process
-tokenize=Tokenization()
+tokenize=Tokenization(wild_type=wild_type)
 
 #Initialization of the DDG calculation procedure
 Gibbs=Energy_Calculation()
 
 #Excluded indices 83,84 because they do not correspond to the same sequence
-training_tokens=tokenize.generate_token(data["sequence"].tolist())
-
-#Definition of the training samples// i.e. The data that we have information about
-x_train=tokenize.project(training_tokens)
-x_train,indices=np.unique(np.round(x_train, 6), axis=0, return_index=True)
-
-#Rstricting the total outlier PCA values
-outlier_x=np.where((x_train[:,0]<x_train[:,0].mean()-1.5*x_train[:,0].std())|(x_train[:,0]>x_train[:,0].mean()+1.5*x_train[:,0].std()))[0]
-outlier_y=np.where((x_train[:,1]<x_train[:,1].mean()-1.5*x_train[:,1].std())|(x_train[:,1]>x_train[:,1].mean()+1.5*x_train[:,1].std()))[0]
-outliers=np.concatenate((outlier_x,outlier_y))
-
-x_train=np.delete(x_train,outliers,axis=0)
-x_train=x_train*1000
-
+x_train=np.array([tokenize.generate_token(data.iloc[index]["sequence"]) for index in range(data.shape[0]) if not index in [83,84]])
+x_train=np.array(tokenize.generate_token(data["sequence"].tolist()))
 
 y_train=np.array(data["ddG"].tolist())
-y_train=y_train[indices]
-y_train=np.delete(y_train,outliers)
+y_train=np.delete(y_train, np.array([83,84]))
 
 #def true_function(x: int)-> int:
     #return 5/(1+np.exp(-x))
@@ -52,15 +38,17 @@ y_train=np.delete(y_train,outliers)
 
 #Definition of the test points // i.e. The total interval of points where we will test the function
 
-x = np.random.uniform(low=x_train[:,0].min(),
-                      high=x_train[:,0].max(),
-                      size=(10_000,)).reshape(-1,1)
+#x = np.random.uniform(low=x_train[:,0].min(),
+                      #high=x_train[:,0].max(),
+                      #size=(10_000,)).reshape(-1,1)
 
-y = np.random.uniform(low=x_train[:,1].min(),
-                      high=x_train[:,1].max(),
-                      size=(10_000,)).reshape(-1,1)
+#y = np.random.uniform(low=x_train[:,1].min(),
+                      #high=x_train[:,1].max(),
+                      #size=(10_000,)).reshape(-1,1)
 
-x_test=np.column_stack((x,y))
+#x_test=np.column_stack((x,y))
+
+x_test=tokenize.generate_test_data(number=1000)
 
 #This could be used to sample from each conditional for every test point and define a random function 
 #Based on the current GP //I need not use that
@@ -100,7 +88,7 @@ def get_snapshot(gp,y_mean,y_std,ucb,x_train,y_train,trained=False):
     ax[1].plot(x_test[:,0],ucb,color='green')
     ax[1].fill_between(
         x_test[:,0],
-        np.zeros((x.shape[0])),
+        np.zeros((x_test.shape[0])),
         ucb,
         alpha=0.1,
         color="green",
@@ -119,31 +107,65 @@ def calculate_state(model,test_data, ucb_coef=8):
     return y_mean, y_std, ucb
 
 #This is the original trained GP
-def training(train_data:np.array, known_values: np.array, cycles: int= 0)->float:
+def training(train_data:np.array, known_values: np.array, x_test:np.array, cycles: int = 0)-> tuple:
     #Defining the RBF kernel 
     kernel=RBF(length_scale=1)
     #Initialization of the Gaussian Process Regressor 
     gp=GP(kernel=kernel)
-    y_mean,y_std,ucb=calculate_state(gp,x_test)
-    get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=train_data,y_train=known_values)
+    y_mean,y_std,ucb=calculate_state(gp,x_test,ucb_coef=8)
+    #get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=train_data,y_train=known_values)
 
     #Fitting the known data
     gp.fit(X=train_data,y=known_values)
-    y_mean,y_std,ucb=calculate_state(gp,x_test)
-    get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=train_data,y_train=known_values,trained=True)
+    y_mean,y_std,ucb=calculate_state(gp,x_test,ucb_coef=8)
+    #get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=train_data,y_train=known_values,trained=True)
     
     #Finding the maximum point to be considered based on the UCB criterion
     next_point=x_test[np.argmin(ucb)]
 
     if cycles!=0:
+
         for cycle in range(cycles):
-            #If the value converges before the cycles end then break out of the loop
-            if (next_point==train_data[-1,:]).all():
-                break
+            
+            print(f"Cycle: {cycle}")
+    
             
             #Update the training data
             train_data=np.append(train_data,next_point.reshape(1,-1),axis=0)
-            seq=tokenize.generate_seq(next_point/1000)
+            seq=tokenize.generate_seq(next_point)
+            positions, mutations=tokenize.sequence_compare(wild_type, seq)
+   
+            mut=Gibbs.set_mutations(position=positions, mutation=mutations)
+            ddG=[Gibbs.get_Gibbs(mut)-Gibbs.base]
+
+            if known_values.min()<=ddG:
+                break
+
+            known_values=np.concatenate((known_values,np.array(ddG)))
+
+
+            #Fit the new GP
+            gp.fit(X=train_data,y=known_values.reshape(-1,1))
+
+            #Set a new test set
+            x_test=tokenize.generate_test_data(1000)
+
+            #Calculate the conditional parameters for my all points that belong to my test space
+            y_mean,y_std,ucb=calculate_state(gp,x_test,ucb_coef=8)
+            #get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=train_data,y_train=known_values,trained=True)
+
+            next_point=x_test[np.argmin(ucb)]
+        
+        return tokenize.generate_seq(train_data[np.argmin(known_values)]),known_values[np.argmin(known_values)]
+    else:
+        ddG=-np.inf
+        #If cycles are not specified, then just check for convergence
+        while known_values.min()>ddG:
+            
+            print("Entered")
+            train_data=np.append(train_data,next_point.reshape(1,-1),axis=0)
+            
+            seq=tokenize.generate_seq(next_point)
             positions, mutations=tokenize.sequence_compare(wild_type, seq)
 
             mut=Gibbs.set_mutations(position=positions, mutation=mutations)
@@ -151,38 +173,22 @@ def training(train_data:np.array, known_values: np.array, cycles: int= 0)->float
 
             known_values=np.concatenate((known_values,np.array(ddG)))
 
-            #Fit the new GP
             gp.fit(X=train_data,y=known_values.reshape(-1,1))
-            #Calculate the conditional parameters for my all points that belong to my test space
-            y_mean,y_std,ucb=calculate_state(gp,x_test)
-            get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=train_data,y_train=known_values,trained=True)
+
+            x_test=tokenize.generate_test_data(1000)
+
+            y_mean,y_std,ucb=calculate_state(gp,x_test,ucb_coef=8)
+            #get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=x_train,y_train=y_train,trained=True)
 
             next_point=x_test[np.argmin(ucb)]
         
-        return next_point/1000,known_values[-1]
-    
-    #If cycles are not specified, then just check for convergence
-    while next_point!=train_data[-1]:
+        return tokenize.generate_seq(train_data[np.argmin(known_values)]),known_values[np.argmin(known_values)]
 
-        train_data=np.append(train_data,next_point.reshape(1,-1),axis=0)
-        
-        seq=tokenize.generate_seq(next_point/1000)
-        positions, mutations=tokenize.sequence_compare(wild_type, seq)
-
-        mut=Gibbs.set_mutations(position=positions, mutation=mutations)
-        ddG=[Gibbs.get_Gibbs(mut)-Gibbs.base]
-
-        known_values=np.concatenate((known_values,np.array(ddG)))
-
-        gp.fit(X=train_data,y=known_values.reshape(-1,1))
-        y_mean,y_std,ucb=calculate_state(gp,x_test)
-        get_snapshot(gp=gp,y_mean=y_mean,y_std=y_std,ucb=ucb,x_train=x_train,y_train=y_train,trained=True)
-
-        next_point=x[np.argmin(ucb)]
-        
-    return next_point/1000,known_values[-1]
-    
-training(x_train,y_train,5)
+import time
+start=time.time()
+opt,stabilization=training(x_train,y_train,x_test,cycles=3)
+end=time.time()
+print(f"Elapsed time {end-start}")
 
 import matplotlib.pyplot as plt
 import seaborn as sns

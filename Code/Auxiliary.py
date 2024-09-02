@@ -82,3 +82,30 @@ mean_x, mean_y=np.median(transformed_seqs, axis=0)
 var_x, var_y=np.std(transformed_seqs, axis=0)
 
 plt.close()
+
+
+class Tokenization:
+    
+    def __init__(self):
+        self.pca=PCA(n_components=2)
+        self._tokenizer=AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
+
+    def generate_token(self,seq):
+        return self._tokenizer(seq, padding=True)["input_ids"]
+    
+    def project(self,data):
+        self.pca.fit(data)
+        return self.pca.transform(data)
+
+    def generate_seq(self,projection):
+        gen=np.ceil(self.pca.inverse_transform(projection))
+        print(gen)
+        return self._tokenizer.decode(gen,skip_special_tokens=True).replace(' ','')
+    
+    def sequence_compare(self, seq1, seq2):
+        seq1, seq2 =list(seq1), list(seq2)
+        check=zip(seq1, seq2)
+        
+        results=dict(filter(lambda x: x[1][0]!=x[1][1],enumerate(check)))
+
+        return list(results.keys()), list(map(lambda x: x[1], results.values()))
