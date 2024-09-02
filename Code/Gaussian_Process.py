@@ -8,9 +8,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from Code.Data_Import import get_data, set_mutation
-from Code.Embeddings import Tokenization
-from Code.DDG_Calculation import Energy_Calculation
+from Data_Import import get_data, set_mutation
+from Embeddings import Tokenization
+from DDG_Calculation import Energy_Calculation
 
 #Generation of the appropriate data
 data=get_data("Endolysin_data")
