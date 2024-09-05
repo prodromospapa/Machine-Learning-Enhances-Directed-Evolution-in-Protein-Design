@@ -45,4 +45,3 @@ class Tokenization:
         results=dict(filter(lambda x: x[1][0]!=x[1][1],enumerate(check)))
 
         return list(results.keys()), list(map(lambda x: x[1], results.values()))
-        

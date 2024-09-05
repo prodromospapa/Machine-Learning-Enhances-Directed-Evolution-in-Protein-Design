@@ -6,10 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from Data_Import import get_data, set_mutation
-from Embeddings import Tokenization
-from DDG_Calculation import Energy_Calculation
-
+from Code.Data_Import import get_data, set_mutation
+from Code.Embeddings import Tokenization
+from Code.DDG_Calculation import Energy_Calculation
 #Generation of the appropriate data
 data=get_data("Endolysin_data")
 wild_type, data=set_mutation(data)
@@ -22,11 +21,11 @@ tokenize=Tokenization(wild_type=wild_type)
 Gibbs=Energy_Calculation()
 
 #Excluded indices 83,84 because they do not correspond to the same sequence
-x_train=np.array([tokenize.generate_token(data.iloc[index]["sequence"]) for index in range(data.shape[0]) if not index in [83,84]])
+#x_train=np.array([tokenize.generate_token(data.iloc[index]["sequence"]) for index in range(data.shape[0]) if not index in [83,84]])
 x_train=np.array(tokenize.generate_token(data["sequence"].tolist()))
 
 y_train=np.array(data["ddG"].tolist())
-y_train=np.delete(y_train, np.array([83,84]))
+#y_train=np.delete(y_train, np.array([83,84]))
 
 #def true_function(x: int)-> int:
     #return 5/(1+np.exp(-x))
@@ -189,6 +188,9 @@ start=time.time()
 opt,stabilization=training(x_train,y_train,x_test,cycles=3)
 end=time.time()
 print(f"Elapsed time {end-start}")
+
+
+exit()
 
 import matplotlib.pyplot as plt
 import seaborn as sns
