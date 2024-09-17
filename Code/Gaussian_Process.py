@@ -6,9 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from Code.Data_Import import get_data, set_mutation
-from Code.Embeddings import Tokenization
-from Code.DDG_Calculation import Energy_Calculation
+from Data_Import import get_data, set_mutation
+from Embeddings import Tokenization
+from DDG_Calculation import Energy_Calculation
 #Generation of the appropriate data
 data=get_data("Endolysin_data")
 wild_type, data=set_mutation(data)
@@ -67,7 +67,7 @@ def training(train_data:np.array, known_values: np.array, x_test:np.array, cycle
    
             mut=Gibbs.set_mutations(position=positions, mutation=mutations)
             ddG=[Gibbs.get_Gibbs(mut)-Gibbs.base]
-
+            
             if known_values.min()<=ddG:
                 break
 
@@ -115,3 +115,6 @@ def training(train_data:np.array, known_values: np.array, x_test:np.array, cycle
 
 
 opt,stabilization=training(x_train,y_train,x_test,cycles=3)
+
+with open("result.txt","w") as f:
+    f.write(f"Sequence: {opt}\t {stabilization}")

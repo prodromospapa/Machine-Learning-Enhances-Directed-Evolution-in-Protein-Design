@@ -1,5 +1,5 @@
 import numpy as np
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer
 
 class Tokenization:
     
