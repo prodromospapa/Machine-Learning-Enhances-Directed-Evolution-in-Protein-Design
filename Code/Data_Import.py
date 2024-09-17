@@ -13,10 +13,13 @@ def get_data(filename):
 
 #Filtering my data based on arbitrary criterions set by us // That is, curated data, with existing Tm effects and pH conditions of 6<=pH<=8
 #There still exist some duplicate values, thus one must filter the data further
-    filtered_dataset=dataset[(dataset["is_curated"]==True) & (~dataset["ddG"].isna())  & (6<=dataset["pH"]) & (dataset["pH"]<=8)]
+    #filtered_dataset=dataset[(dataset["is_curated"]==True) & (~dataset["ddG"].isna())  & (6<=dataset["pH"]) & (dataset["pH"]<=8)]
+    
+    dataset.dropna(subset=['pH'],inplace=True)
+    filtered_dataset=dataset[dataset['pH'] == dataset['pH'].value_counts().idxmax()]
 
 #Drop the duplicate entries that exist based on the relevant columns of my data
-    filtered_dataset.drop_duplicates(subset=["wild_type","position","mutation","pH","tm"],keep='first',inplace=True)
+    filtered_dataset.drop_duplicates(subset=["wild_type","position","mutation","pH"],keep='first',inplace=True)
     return filtered_dataset
 
 

@@ -2,9 +2,6 @@ import numpy as np
 from transformers import AutoTokenizer, AutoModel
 
 class Tokenization:
-
-    aminos={'M': 0, 'N': 1, 'I': 2, 'F': 3, 'E': 4, 'L': 5, 'R': 6, 'D': 7, 'K': 8,'Y': 9, 
-     'T': 10, 'G': 11, 'H': 12, 'S': 13, 'P': 14, 'A': 15, 'C': 16,  'V': 17, 'Q': 18, 'W': 19}
     
     def __init__(self,wild_type):
         self._tokenizer=AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
@@ -12,14 +9,10 @@ class Tokenization:
 
     def generate_token(self,seq):
         return self._tokenizer(seq, padding=True)["input_ids"]
-        #return list(map(lambda x: Tokenization.aminos[x],seq))
     
     
-    def generate_seq(self,token):
-        
-        #inverse_dict=dict(map(lambda x: (x[1],x[0]),Tokenization.aminos.items()))
+    def generate_seq(self,token): 
         return self._tokenizer.decode(token,skip_special_tokens=True).replace(' ','')
-        #return "".join(map(lambda x: inverse_dict[x], token))
     
     
     def _mutate_seq(self,arr, position, mutation):

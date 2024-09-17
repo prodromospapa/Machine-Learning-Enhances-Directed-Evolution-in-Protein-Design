@@ -89,9 +89,4 @@ class Energy_Calculation:
 
 
 
-#Gibbs=Energy_Calculation()
-#mut=Gibbs.set_mutations(filtered_dataset.iloc[0]["position"]-1, filtered_dataset.iloc[0]["mutation"])
-#mutated_gibbs=Gibbs.get_Gibbs(mut)
-
-
 
